@@ -1,0 +1,6 @@
+.env
+backend/app/.env
+.venv/
+__pycache__/
+*.pyc
+TEST_RESULTS.md

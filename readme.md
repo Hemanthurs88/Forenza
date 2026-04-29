@@ -214,6 +214,33 @@ UI update
 
 * FastAPI
 
+### 2.3 Python Environment
+
+Create and use a dedicated Python virtual environment for the backend before installing dependencies.
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+pip install fastapi uvicorn sqlalchemy asyncpg
+pip install boto3
+pip install httpx
+pip install "python-jose[cryptography]"
+pip install python-dotenv pydantic
+```
+
+Create a `.env` file in the backend root for local configuration and keep secrets out of version control.
+
+```env
+DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/forenza
+AWS_ACCESS_KEY_ID=your_access_key
+AWS_SECRET_ACCESS_KEY=your_secret_key
+R2_ACCOUNT_ID=your_r2_account_id
+R2_BUCKET_NAME=your_r2_bucket_name
+ML_SERVICE_URL=http://localhost:8001
+JWT_SECRET_KEY=your_jwt_secret
+```
+
 ### AI / ML
 
 * StyleGAN
