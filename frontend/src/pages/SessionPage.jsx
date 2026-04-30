@@ -166,7 +166,7 @@ export default function SessionPage() {
         </nav>
 
         {/* User + Logout */}
-        <div className="p-3 border-t border-border space-y-2 shrink-0">
+        <div className="p-3 mb-6 border-t border-border space-y-2 shrink-0">
           {sidebarOpen && user && (
             <div className="px-2 py-1">
               <p className="text-[10px] font-mono text-outline truncate">{user.email || 'OPERATIVE'}</p>
@@ -291,12 +291,14 @@ export default function SessionPage() {
         </div>
       </main>
       {/* Legal Disclaimer Overlay */}
-      <footer className="fixed bottom-0 left-0 right-0 bg-surface-container-high/80 backdrop-blur-md border-t border-border py-1.5 px-4 flex items-center justify-center gap-2 z-[200]">
-        <svg className="w-3.5 h-3.5 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <footer className="fixed bottom-0 left-0 right-0 bg-surface-container-high/90 backdrop-blur-md border-t border-border py-3 px-6 flex items-center justify-center gap-3 z-[200]">
+        <svg className="w-5 h-5 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
         </svg>
-        <p className="text-[10px] font-display font-medium text-on-surface-variant tracking-wide">
-          <span className="text-warning font-bold">FORENSIC DISCLAIMER:</span> AI-generated reconstructions are morphological models based on descriptive testimony. These images are for investigative reference only and do not constitute absolute biological accuracy.
+        <p className="text-xs font-display font-semibold text-on-surface-variant tracking-wide leading-relaxed text-center">
+          <span className="text-warning font-bold uppercase mr-1">Forensic Disclaimer:</span> 
+          AI-generated reconstructions are morphological models based on descriptive testimony. 
+          These images are for investigative reference only and do not constitute 100% biological accuracy.
         </p>
       </footer>
     </div>
