@@ -11,10 +11,12 @@ async def write_audit_log(db: AsyncSession, entry: AuditLogEntry) -> AuditLog:
     record = AuditLog(
         session_id=UUID(entry.session_id) if entry.session_id else None,
         user_id=UUID(entry.user_id) if entry.user_id else None,
+        case_id=UUID(entry.case_id) if entry.case_id else None,
         action=entry.action,
         params_before=entry.params_before,
         params_after=entry.params_after,
         image_url=entry.image_url,
+        phash=entry.phash,
     )
     db.add(record)
     await db.commit()
@@ -30,14 +32,18 @@ async def log_action(
     params_before: dict,
     params_after: dict,
     image_url: str | None = None,
+    case_id: str | None = None,
+    phash: str | None = None,
 ) -> AuditLog:
     """Convenience helper to log an action with before/after parameters."""
     entry = AuditLogEntry(
         session_id=session_id,
         user_id=user_id,
+        case_id=case_id,
         action=action,
         params_before=params_before,
         params_after=params_after,
         image_url=image_url,
+        phash=phash,
     )
     return await write_audit_log(db, entry)

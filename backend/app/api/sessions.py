@@ -30,6 +30,7 @@ async def create_new_session(
     session = await create_session(
         db,
         user_id=user_id,
+        case_id=req.case_id,
         preset=req.preset,
         parameters=req.parameters.model_dump(),
     )

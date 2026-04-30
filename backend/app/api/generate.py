@@ -53,9 +53,13 @@ async def generate_face(
     # Call Image Generation Engine
     from app.core.image_gen import generate_forensic_image
     from app.core.storage import upload_image_bytes
+    from app.core.similarity import compute_phash, hash_to_string
     
     try:
         raw_image_bytes = await generate_forensic_image(params_before, z_current)
+        # Compute pHash for similarity matching
+        phash_arr = compute_phash(raw_image_bytes)
+        phash_str = hash_to_string(phash_arr)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -75,10 +79,12 @@ async def generate_face(
         db,
         session_id=session_id,
         user_id=user_id,
+        case_id=str(session.case_id) if session.case_id else None,
         action="generate",
         params_before=params_before,
         params_after=params_before,  # params didn't change
         image_url=image_url,
+        phash=phash_str,
     )
 
     return {

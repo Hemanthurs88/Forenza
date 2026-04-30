@@ -8,10 +8,12 @@ class AuditLogEntry(BaseModel):
     """Audit log entry for writing to database."""
     session_id: str
     user_id: str
+    case_id: str | None = None
     action: str
     params_before: dict = Field(default_factory=dict)
     params_after: dict = Field(default_factory=dict)
     image_url: str | None = None
+    phash: str | None = None
 
 
 class AuditLogRead(BaseModel):
@@ -19,6 +21,7 @@ class AuditLogRead(BaseModel):
     id: str
     session_id: str | None
     user_id: str | None
+    case_id: str | None = None
     action: str
     params_before: dict
     params_after: dict
@@ -34,6 +37,7 @@ class AuditLogRead(BaseModel):
             id=str(obj.id),
             session_id=str(obj.session_id) if obj.session_id else None,
             user_id=str(obj.user_id) if obj.user_id else None,
+            case_id=str(obj.case_id) if obj.case_id else None,
             action=obj.action,
             params_before=obj.params_before or {},
             params_after=obj.params_after or {},

@@ -1,6 +1,7 @@
 // src/components/FaceCanvas.jsx
 import useSessionStore from '../store/sessionStore'
 import { exportSession } from '../api/sessions'
+import { matchFace } from '../api/match'
 import toast from 'react-hot-toast'
 import { useState } from 'react'
 
@@ -8,25 +9,49 @@ export default function FaceCanvas() {
   const { sessionId, imageUrl, isLoading, undo, redo, historyIndex, imageHistory } = useSessionStore()
   const [exporting, setExporting] = useState(false)
   const [compareMode, setCompareMode] = useState(false)
+  const [matching, setMatching] = useState(false)
+  const [matches, setMatches] = useState([])
+  const [showMatches, setShowMatches] = useState(false)
 
   const handleExport = async () => {
     if (!sessionId) return
     setExporting(true)
     try {
       const data = await exportSession(sessionId)
-      if (data.download_url) {
-        const link = document.createElement('a')
-        link.href = data.download_url
-        link.download = `forensic-export-${sessionId}.png`
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-      }
-      toast.success('Export initiated')
+      const jsonStr = JSON.stringify(data, null, 2)
+      const blob = new Blob([jsonStr], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `forensic-case-export-${sessionId.slice(0, 8)}.json`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+      toast.success('Case export complete')
     } catch (err) {
       toast.error('Export failed')
     } finally {
       setExporting(false)
+    }
+  }
+
+  const handleMatch = async () => {
+    if (!sessionId) return
+    setMatching(true)
+    try {
+      const results = await matchFace(sessionId)
+      setMatches(results)
+      setShowMatches(true)
+      if (results.length === 0) {
+        toast('No high-confidence matches found in database.', { icon: '🔍' })
+      } else {
+        toast.success(`Found ${results.length} potential matches`)
+      }
+    } catch (err) {
+      toast.error('Matching service error')
+    } finally {
+      setMatching(false)
     }
   }
 
@@ -140,18 +165,94 @@ export default function FaceCanvas() {
             </div>
           )}
         </div>
-        <button
-          id="export-btn"
-          onClick={handleExport}
-          disabled={!sessionId || !imageUrl || exporting}
-          className="flex items-center gap-2 px-4 py-2 text-xs font-display font-semibold border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:border-primary hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-          </svg>
-          {exporting ? 'EXPORTING...' : 'EXPORT HIGH-RES'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleMatch}
+            disabled={!sessionId || !imageUrl || matching}
+            className={`flex items-center gap-2 px-4 py-2 text-xs font-display font-semibold border border-outline-variant rounded-lg transition-all ${matching ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-surface-container-high hover:text-primary'}`}
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            {matching ? 'SEARCHING...' : 'MATCH DATABASE'}
+          </button>
+          <button
+            id="export-btn"
+            onClick={handleExport}
+            disabled={!sessionId || !imageUrl || exporting}
+            className="flex items-center gap-2 px-4 py-2 text-xs font-display font-semibold border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:border-primary hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+            {exporting ? 'EXPORTING...' : 'EXPORT JSON'}
+          </button>
+        </div>
       </div>
+
+      {/* Matching Modal */}
+      {showMatches && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6 animate-fade-in">
+          <div className="bg-surface-container-high border border-border w-full max-w-4xl max-h-[80vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+            <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-surface-container-lowest">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-display font-bold text-lg text-on-surface uppercase tracking-wider">DATABASE MATCH RESULTS</h3>
+                  <p className="text-xs text-on-surface-variant font-mono">Algorithm: Perceptual Hash (DCT Hamming Distance)</p>
+                </div>
+              </div>
+              <button onClick={() => setShowMatches(false)} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-surface-container-highest transition-colors">✕</button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-6">
+              {matches.length === 0 ? (
+                <div className="h-64 flex flex-col items-center justify-center text-outline gap-3 opacity-60">
+                  <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                  </svg>
+                  <p className="font-display font-semibold">NO MATCHES FOUND</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {matches.map((match, idx) => (
+                    <div key={idx} className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:border-primary/50 transition-all group">
+                      <div className="aspect-square relative overflow-hidden bg-black/5">
+                        <img src={match.image_url} alt="Match" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                        <div className="absolute top-2 right-2 bg-primary/90 text-white text-[10px] font-mono px-2 py-1 rounded-full shadow-lg">
+                          {match.score}% MATCH
+                        </div>
+                      </div>
+                      <div className="p-3 space-y-1.5">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] font-mono text-outline uppercase tracking-tighter">Case Reference</span>
+                          <span className="text-[10px] font-mono text-primary font-bold">{match.case_id?.slice(0, 8) || 'N/A'}</span>
+                        </div>
+                        <div className="flex justify-between items-center pb-2 border-b border-border/50">
+                          <span className="text-[10px] font-mono text-outline uppercase tracking-tighter">Action Logged</span>
+                          <span className="text-[10px] font-mono text-on-surface uppercase">{match.action}</span>
+                        </div>
+                        <div className="pt-1 flex justify-between items-center text-[9px] text-outline">
+                          <span>{new Date(match.timestamp).toLocaleDateString()}</span>
+                          <span>{new Date(match.timestamp).toLocaleTimeString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <div className="px-6 py-4 bg-surface-container-lowest border-t border-border flex justify-end">
+              <button onClick={() => setShowMatches(false)} className="px-6 py-2 bg-surface-container-high text-on-surface font-display font-bold text-xs rounded-lg hover:bg-surface-container-highest transition-all">CLOSE REPORT</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

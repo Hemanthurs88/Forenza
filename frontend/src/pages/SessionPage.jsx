@@ -1,5 +1,5 @@
 // src/pages/SessionPage.jsx
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useAuthStore from '../store/authStore'
 import useSessionStore from '../store/sessionStore'
@@ -11,13 +11,13 @@ import AuditTimeline from '../components/AuditTimeline'
 import CaseFiles from '../components/CaseFiles'
 import SystemLog from '../components/SystemLog'
 import { createSession, generateFace } from '../api/sessions'
+import { listCases, createCase } from '../api/cases'
 import { parseNLP } from '../api/nlp'
 import toast from 'react-hot-toast'
 
 const NAV_ITEMS = [
   { id: 'Facial Lab', icon: '◉' },
   { id: 'Case Files', icon: '▣' },
-  { id: 'Evidence', icon: '◈' },
   { id: 'System Log', icon: '▤' },
 ]
 
@@ -29,6 +29,21 @@ export default function SessionPage() {
   
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [activeTab, setActiveTab] = useState('Facial Lab')
+  const [cases, setCases] = useState([])
+  const [selectedCaseId, setSelectedCaseId] = useState('')
+
+  const loadCases = async () => {
+    try {
+      const data = await listCases()
+      setCases(data)
+    } catch (err) {
+      console.error('Failed to load cases')
+    }
+  }
+
+  useEffect(() => {
+    loadCases()
+  }, [])
 
   const handleInitialGenerate = async (promptText, lang) => {
     let sessionData
@@ -48,8 +63,11 @@ export default function SessionPage() {
         toast.error('NLP processing failed, using default parameters')
       }
 
-      // Step 2: Create session in DB with parsed parameters
-      sessionData = await createSession({ parameters: initialParams })
+      // Step 2: Create session in DB with parsed parameters and selected case
+      sessionData = await createSession({ 
+        parameters: initialParams,
+        case_id: selectedCaseId || null
+      })
       setSession(sessionData.session_id)
     } catch (err) {
       setLoading(false)
@@ -199,7 +217,20 @@ export default function SessionPage() {
                     Describe the subject's facial features in natural language. The system will process the parameters and generate a base morphological model.
                   </p>
                 </div>
-                <div className="max-w-xl mx-auto">
+                <div className="max-w-xl mx-auto space-y-6">
+                  <div>
+                    <label className="text-[10px] font-display font-bold text-outline uppercase tracking-wider mb-2 block text-center">ASSIGN TO CASE (OPTIONAL)</label>
+                    <select 
+                      value={selectedCaseId} 
+                      onChange={e => setSelectedCaseId(e.target.value)}
+                      className="w-full bg-surface-container-high border border-outline-variant rounded-lg px-4 py-2 text-sm text-on-surface focus:outline-none focus:border-primary transition-all"
+                    >
+                      <option value="">-- NO CASE ASSIGNED --</option>
+                      {cases.map(c => (
+                        <option key={c.id} value={c.id}>{c.case_number} - {c.description?.slice(0, 30)}...</option>
+                      ))}
+                    </select>
+                  </div>
                   <PromptBar isInitial={true} onInitialGenerate={handleInitialGenerate} />
                 </div>
               </div>

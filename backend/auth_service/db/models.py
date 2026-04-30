@@ -26,6 +26,7 @@ class Session(Base):
 
     id         = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id    = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    case_id    = Column(UUID(as_uuid=True), ForeignKey("cases.id", ondelete="SET NULL"), nullable=True)
     z_current  = Column(Text, nullable=True)       # JSON-serialised latent vector
     parameters = Column(Text, nullable=True)       # JSON-serialised param dict
     preset     = Column(String, nullable=True)
@@ -40,8 +41,10 @@ class AuditLog(Base):
     id           = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     session_id   = Column(UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="SET NULL"), nullable=True)
     user_id      = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    case_id      = Column(UUID(as_uuid=True), ForeignKey("cases.id", ondelete="SET NULL"), nullable=True)
     action       = Column(String, nullable=False)   # e.g. "param_change", "export_image"
     params_before = Column(Text, nullable=True)     # JSON snapshot before change
     params_after  = Column(Text, nullable=True)     # JSON snapshot after change
     image_url    = Column(String, nullable=True)
+    phash        = Column(String, nullable=True)
     timestamp    = Column(DateTime(timezone=True), server_default=func.now())

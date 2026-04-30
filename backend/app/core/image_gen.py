@@ -10,11 +10,11 @@ import base64
 # every time, regardless of which features change.
 
 IDENTITY_ANCHOR = (
-    "A professional forensic mugshot, front-facing portrait of one Caucasian male, "
+    "A detailed forensic police sketch, hand-drawn pencil portrait, charcoal shading, "
+    "front-facing portrait of one Caucasian male, "
     "looking directly into the camera lens, eyes at camera level, shoulders square and symmetrical. "
-    "He is 38 years old, short dark brown hair, brown eyes, light stubble. "
-    "Neutral expression, plain light grey background, soft even studio lighting, no shadows. "
-    "High-resolution photograph, 85mm lens, sharp focus, ultra-detailed skin texture, "
+    "He is 38 years old, short hair, neutral expression, plain white paper background. "
+    "Sharp pencil lines, professional artistic sketch, realistic proportions, "
     "completely centered, perfectly symmetrical, no head tilt, no rotation."
 )
 
@@ -140,51 +140,39 @@ def build_forensic_prompt(parameters: dict) -> str:
 
 async def generate_forensic_image(parameters: dict, seed: str) -> bytes:
     """
-    Generate a forensic portrait using Cloudflare SDXL with a deterministic seed.
+    Generate a forensic sketch using Pollinations.ai (Free & Unlimited).
     """
-    prompt = build_forensic_prompt(parameters)
-    print(f"[ImageGen] Prompt: {prompt[:250]}...")
+    base_prompt = build_forensic_prompt(parameters)
+    # Force a "forensic sketch" style
+    sketch_prompt = f"{base_prompt} High quality forensic sketch on paper."
+    
+    import urllib.parse
+    encoded_prompt = urllib.parse.quote(sketch_prompt)
+    
+    # Pollinations.ai supports seed for consistency
+    url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?seed={seed}&width=1024&height=1024&nologo=true"
+    
+    print(f"[ImageGen] Requesting sketch from Pollinations: {url[:100]}...")
 
-    cf_account = os.getenv("R2_ACCOUNT_ID")
-    cf_token = os.getenv("CLOUDFLARE_AI_TOKEN")
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as http_client:
+                response = await http_client.get(url)
+                response.raise_for_status()
 
-    if cf_account and cf_token:
-        url = f"https://api.cloudflare.com/client/v4/accounts/{cf_account}/ai/run/@cf/stabilityai/stable-diffusion-xl-base-1.0"
-        headers = {"Authorization": f"Bearer {cf_token}"}
+                if len(response.content) > 1000:
+                    print(f"[ImageGen] Sketch success: {len(response.content)} bytes")
+                    return response.content
+                else:
+                    raise Exception(f"Response too small: {len(response.content)} bytes")
+        except Exception as e:
+            if attempt == max_retries - 1:
+                print(f"[ImageGen] Pollinations failed after retries: {e}")
+                break
+            print(f"[ImageGen] Retry {attempt+1}: {e}")
+            await asyncio.sleep(1)
 
-        # Use the session seed to lock the base face structure
-        numeric_seed = int(seed) if str(seed).isdigit() else 42
-        
-        data = {
-            "prompt": prompt,
-            "negative_prompt": NEGATIVE_PROMPT,
-            "seed": numeric_seed,
-            "num_steps": 25,  # Increased steps for more detail
-            "guidance": 7.5,
-        }
-
-        max_retries = 3
-        for attempt in range(max_retries):
-            try:
-                async with httpx.AsyncClient(timeout=60.0) as http_client:
-                    response = await http_client.post(url, headers=headers, json=data)
-                    response.raise_for_status()
-
-                    if len(response.content) > 1000:
-                        print(f"[ImageGen] SDXL success: {len(response.content)} bytes")
-                        return response.content
-                    else:
-                        raise Exception(f"Response too small: {len(response.content)} bytes")
-            except Exception as e:
-                if attempt == max_retries - 1:
-                    print(f"[ImageGen] SDXL failed after retries: {e}")
-                    break
-                print(f"[ImageGen] Retry {attempt+1}: {e}")
-                await asyncio.sleep(2 ** attempt)
-    else:
-        print("[ImageGen] Missing Cloudflare credentials")
-
-    # Fallback: return a local placeholder
     return _fallback_image()
 
 

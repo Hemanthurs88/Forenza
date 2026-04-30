@@ -14,6 +14,7 @@ def _to_uuid(value: str | UUID) -> UUID:
 async def create_session(
     db: AsyncSession,
     user_id: str,
+    case_id: str | None = None,
     preset: str | None = None,
     parameters: dict | None = None,
 ) -> SessionRecord:
@@ -21,6 +22,7 @@ async def create_session(
     import random
     record = SessionRecord(
         user_id=_to_uuid(user_id),
+        case_id=_to_uuid(case_id) if case_id else None,
         parameters=parameters or {},
         preset=preset,
         z_current=str(random.randint(100000, 999999))

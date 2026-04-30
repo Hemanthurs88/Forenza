@@ -31,11 +31,25 @@ async def export_session(
             detail="Forbidden"
         )
 
+    # Fetch all audit logs for this session
+    from app.db.models import AuditLog
+    from sqlalchemy import select
+    from app.schemas.audit import AuditLogRead
+
+    result = await db.execute(
+        select(AuditLog)
+        .where(AuditLog.session_id == session.id)
+        .order_by(AuditLog.timestamp.asc())
+    )
+    logs = result.scalars().all()
+
     return {
         "session_id": session_id,
+        "case_id": str(session.case_id) if session.case_id else None,
         "parameters": session.parameters,
         "z_current": session.z_current,
         "preset": session.preset,
         "created_at": session.created_at.isoformat(),
         "updated_at": session.updated_at.isoformat(),
+        "history": [AuditLogRead.from_orm(log).model_dump() for log in logs],
     }

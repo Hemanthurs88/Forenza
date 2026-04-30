@@ -52,12 +52,16 @@ async def refine_face(
 
     from app.core.image_gen import generate_forensic_image
     from app.core.storage import upload_image_bytes
+    from app.core.similarity import compute_phash, hash_to_string
     
     try:
         # Same SDXL pipeline as initial generation, with same session seed.
         # The anchored prompt + seed ensures the face structure stays consistent.
         # Only the feature descriptors change based on accumulated parameters.
         raw_image_bytes = await generate_forensic_image(params_after, session.z_current)
+        # Compute pHash for similarity matching
+        phash_arr = compute_phash(raw_image_bytes)
+        phash_str = hash_to_string(phash_arr)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -78,10 +82,12 @@ async def refine_face(
         db,
         session_id=session_id,
         user_id=user_id,
+        case_id=str(session.case_id) if session.case_id else None,
         action="refine",
         params_before=params_before,
         params_after=params_after,
         image_url=image_url,
+        phash=phash_str,
     )
 
     return {

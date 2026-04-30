@@ -22,11 +22,21 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
 
 
+class Case(Base):
+    __tablename__ = "cases"
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
+    case_number: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+
+
 class SessionRecord(Base):
     __tablename__ = "sessions"
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    case_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("cases.id", ondelete="SET NULL"), nullable=True, index=True)
     z_current: Mapped[str | None] = mapped_column(Text, nullable=True)
     parameters: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
     preset: Mapped[str | None] = mapped_column(String(100), nullable=True)
@@ -34,6 +44,7 @@ class SessionRecord(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     user: Mapped[User] = relationship()
+    case: Mapped[Case] = relationship()
 
 
 class AuditLog(Base):
@@ -42,11 +53,14 @@ class AuditLog(Base):
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
     session_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="SET NULL"), nullable=True, index=True)
     user_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    case_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("cases.id", ondelete="SET NULL"), nullable=True, index=True)
     action: Mapped[str] = mapped_column(String(100), nullable=False)
     params_before: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
     params_after: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
     image_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    phash: Mapped[str | None] = mapped_column(String(64), nullable=True)  # Store as 64-char bit string
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
 
     session: Mapped[SessionRecord] = relationship()
     user: Mapped[User] = relationship()
+    case: Mapped[Case] = relationship()

@@ -10,6 +10,7 @@ export const createSession = async (presets) => {
   const res = await client.post('/api/sessions', {
     parameters: presets?.parameters ?? {},
     preset: presets?.preset ?? null,
+    case_id: presets?.case_id ?? null,
   })
   // Normalise to the shape the UI expects: { session_id }
   return { session_id: res.data.id, ...res.data }

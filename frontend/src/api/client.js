@@ -3,9 +3,8 @@ import axios from 'axios'
 import useAuthStore from '../store/authStore'
 
 const client = axios.create({
-  // Use empty baseURL so requests go through Vite's dev proxy (/api/* → :8000).
-  // Set VITE_API_URL in .env.local only when deploying without a proxy.
-  baseURL: import.meta.env.VITE_API_URL ?? '',
+  // Direct connection to backend to avoid proxy-induced CORS redirect issues.
+  baseURL: import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:8000',
   headers: { 'Content-Type': 'application/json' },
 })
 

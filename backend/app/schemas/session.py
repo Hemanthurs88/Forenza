@@ -22,6 +22,7 @@ class SessionStateRead(BaseModel):
     """Session state for API responses."""
     id: str          # serialised as string for frontend
     user_id: str
+    case_id: str | None = None
     parameters: dict = Field(default_factory=dict)
     preset: str | None = None
     z_current: str | None = None
@@ -37,6 +38,7 @@ class SessionStateRead(BaseModel):
         return cls(
             id=str(obj.id),
             user_id=str(obj.user_id),
+            case_id=str(obj.case_id) if obj.case_id else None,
             parameters=obj.parameters or {},
             preset=obj.preset,
             z_current=obj.z_current,
@@ -48,4 +50,5 @@ class SessionStateRead(BaseModel):
 class SessionStateCreate(BaseModel):
     """Session creation request."""
     parameters: FaceParams = Field(default_factory=FaceParams)
+    case_id: UUID | None = None
     preset: str | None = None
