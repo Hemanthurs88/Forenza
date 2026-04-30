@@ -132,16 +132,19 @@ export default function FaceCanvas() {
               {activeOverlays.map(o => (
                 <div 
                   key={o.id}
-                  className="absolute cursor-move select-none"
+                  className="absolute cursor-move select-none group"
                   style={{
                     left: `${o.x}%`,
                     top: `${o.y}%`,
                     transform: `translate(-50%, -50%) scale(${o.scale})`,
                     opacity: o.opacity,
                     filter: 'contrast(1.2) brightness(0.8) grayscale(1)',
-                    mixBlendMode: 'multiply' // Blend with the skin
+                    mixBlendMode: 'multiply'
                   }}
                   onMouseDown={(e) => {
+                    // Only drag if not clicking the resize handle
+                    if (e.target.id === 'resize-handle') return;
+                    
                     const container = e.currentTarget.parentElement;
                     const rect = container.getBoundingClientRect();
                     const onMouseMove = (moveEvent) => {
@@ -157,12 +160,36 @@ export default function FaceCanvas() {
                     window.addEventListener('mouseup', onMouseUp);
                   }}
                 >
-                  <img 
-                    src={o.url} 
-                    alt={o.name} 
-                    className="max-w-[400px] pointer-events-none" 
-                    draggable="false"
-                  />
+                  <div className="relative">
+                    <img 
+                      src={o.url} 
+                      alt={o.name} 
+                      className="max-w-[400px] pointer-events-none" 
+                      draggable="false"
+                    />
+                    
+                    {/* Resize Handle */}
+                    <div 
+                      id="resize-handle"
+                      className="absolute -bottom-1 -right-1 w-4 h-4 bg-primary border-2 border-white rounded-full opacity-0 group-hover:opacity-100 cursor-nwse-resize transition-opacity shadow-lg z-10"
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                        const startX = e.clientX;
+                        const startScale = o.scale;
+                        
+                        const onMouseMove = (moveEvent) => {
+                          const delta = (moveEvent.clientX - startX) / 100;
+                          updateOverlay(o.id, { scale: Math.max(0.2, startScale + delta) });
+                        };
+                        const onMouseUp = () => {
+                          window.removeEventListener('mousemove', onMouseMove);
+                          window.removeEventListener('mouseup', onMouseUp);
+                        };
+                        window.addEventListener('mousemove', onMouseMove);
+                        window.addEventListener('mouseup', onMouseUp);
+                      }}
+                    />
+                  </div>
                 </div>
               ))}
             </div>
