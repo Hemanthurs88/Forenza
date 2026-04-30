@@ -27,12 +27,13 @@ async def parse_nlp(
     """
     user_id = current_user.get("sub")
     
-    parameters, interpretation = await parse_natural_language_to_params(req.text, req.lang)
+    parameters, gender, interpretation = await parse_natural_language_to_params(req.text, req.lang)
     
     return {
         "user_id": user_id,
         "input": req.text,
         "parameters": parameters,
+        "gender": gender,
         "interpretation": interpretation,
     }
 

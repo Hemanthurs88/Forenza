@@ -33,6 +33,8 @@ async def create_new_session(
         case_id=req.case_id,
         preset=req.preset,
         parameters=req.parameters.model_dump(),
+        description=req.description,
+        gender=req.gender,
     )
     return SessionStateRead.from_orm(session)
 

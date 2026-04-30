@@ -11,6 +11,7 @@ export const createSession = async (presets) => {
     parameters: presets?.parameters ?? {},
     preset: presets?.preset ?? null,
     case_id: presets?.case_id ?? null,
+    description: presets?.description ?? null,
   })
   // Normalise to the shape the UI expects: { session_id }
   return { session_id: res.data.id, ...res.data }
@@ -30,8 +31,8 @@ export const generateFace = async (sessionId) => {
  * Body: { parameters: FaceParams }
  * Returns: { session_id, image_url, z_current, parameters, timestamp }
  */
-export const refineFace = async (sessionId, parameters) => {
-  const res = await client.post(`/api/sessions/${sessionId}/refine`, { parameters })
+export const refineFace = async (sessionId, parameters, description = null) => {
+  const res = await client.post(`/api/sessions/${sessionId}/refine`, { parameters, description })
   return res.data
 }
 

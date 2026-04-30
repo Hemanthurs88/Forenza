@@ -17,6 +17,8 @@ async def create_session(
     case_id: str | None = None,
     preset: str | None = None,
     parameters: dict | None = None,
+    description: str | None = None,
+    gender: str = "male",
 ) -> SessionRecord:
     """Create a new session for a user."""
     import random
@@ -25,6 +27,8 @@ async def create_session(
         case_id=_to_uuid(case_id) if case_id else None,
         parameters=parameters or {},
         preset=preset,
+        description=description,
+        gender=gender,
         z_current=str(random.randint(100000, 999999))
     )
     db.add(record)

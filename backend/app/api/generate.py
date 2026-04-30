@@ -56,7 +56,12 @@ async def generate_face(
     from app.core.similarity import compute_phash, hash_to_string
     
     try:
-        raw_image_bytes = await generate_forensic_image(params_before, z_current)
+        raw_image_bytes = await generate_forensic_image(
+            params_before, 
+            z_current, 
+            refinement_text=session.description,
+            gender=session.gender
+        )
         # Compute pHash for similarity matching
         phash_arr = compute_phash(raw_image_bytes)
         phash_str = hash_to_string(phash_arr)

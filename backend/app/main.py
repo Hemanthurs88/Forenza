@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth_proxy, cases, export, generate, history, match, nlp, refine, sessions
+from app.api import auth_proxy, audit, cases, export, generate, history, match, nlp, refine, sessions
 from app.db.database import engine
 from app.db.models import Base
 
@@ -36,5 +36,5 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-for router in [sessions, cases, generate, refine, match, nlp, export, history, auth_proxy]:
+for router in [sessions, cases, generate, refine, match, nlp, export, history, auth_proxy, audit]:
     app.include_router(router.router, prefix="/api")

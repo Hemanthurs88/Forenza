@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi.responses import StreamingResponse
+import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.session_manager import get_session
@@ -53,3 +55,32 @@ async def export_session(
         "updated_at": session.updated_at.isoformat(),
         "history": [AuditLogRead.from_orm(log).model_dump() for log in logs],
     }
+
+@router.get("/download-image")
+async def download_image_proxy(
+    url: str = Query(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Proxy image download to bypass CORS blocks in browser."""
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url)
+            response.raise_for_status()
+            
+            # Get filename from URL or default
+            filename = url.split("/")[-1].split("?")[0] or "forensic-sketch.png"
+            if not filename.endswith((".png", ".jpg", ".jpeg")):
+                filename += ".png"
+
+            return StreamingResponse(
+                iter([response.content]),
+                media_type=response.headers.get("content-type", "image/png"),
+                headers={
+                    "Content-Disposition": f"attachment; filename={filename}"
+                }
+            )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to fetch image: {str(e)}"
+        )

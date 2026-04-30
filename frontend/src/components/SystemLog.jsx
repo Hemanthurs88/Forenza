@@ -1,11 +1,25 @@
-// src/components/SystemLog.jsx
+import { useState, useEffect } from 'react'
+import { getGlobalAuditLog } from '../api/audit'
+
 export default function SystemLog() {
-  const logs = [
-    { ts: '10:42:01', level: 'INFO', msg: 'Neural engine initialized successfully.' },
-    { ts: '10:45:12', level: 'WARN', msg: 'Latency spike detected on latent inference node.' },
-    { ts: '11:02:55', level: 'ERROR', msg: 'Failed to sync audit payload to remote server.' },
-    { ts: '11:15:30', level: 'INFO', msg: 'Session SES-1029 gracefully terminated.' },
-  ]
+  const [logs, setLogs] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchLogs = async () => {
+      try {
+        const data = await getGlobalAuditLog()
+        setLogs(data)
+      } catch (err) {
+        console.error('Failed to fetch system logs', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchLogs()
+    const interval = setInterval(fetchLogs, 10000) // Refresh every 10s
+    return () => clearInterval(interval)
+  }, [])
 
   return (
     <div className="h-full flex flex-col bg-surface-container-lowest border border-border rounded-xl overflow-hidden animate-fade-in font-mono">
@@ -18,16 +32,15 @@ export default function SystemLog() {
       </div>
       
       <div className="flex-1 p-4 overflow-y-auto space-y-1 text-[11px]">
-        {logs.map((log, i) => (
-          <div key={i} className="flex gap-4 hover:bg-surface-container-high px-2 py-1 rounded">
-            <span className="text-outline shrink-0">[{log.ts}]</span>
-            <span className={`shrink-0 w-12 ${
-              log.level === 'ERROR' ? 'text-error' : 
-              log.level === 'WARN' ? 'text-warning' : 'text-success'
-            }`}>
-              {log.level}
+        {loading && logs.length === 0 ? (
+          <div className="text-outline animate-pulse">Initializing diagnostic stream...</div>
+        ) : logs.map((log, i) => (
+          <div key={log.id || i} className="flex gap-4 hover:bg-surface-container-high px-2 py-1 rounded">
+            <span className="text-outline shrink-0">[{new Date(log.timestamp).toLocaleTimeString()}]</span>
+            <span className="shrink-0 w-12 text-success">
+              INFO
             </span>
-            <span className="text-on-surface-variant">{log.msg}</span>
+            <span className="text-on-surface-variant truncate">{log.summary}</span>
           </div>
         ))}
         <div className="flex gap-4 px-2 py-1 animate-pulse">

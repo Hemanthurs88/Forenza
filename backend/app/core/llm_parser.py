@@ -13,7 +13,7 @@ SYSTEM_PROMPT = """
 You are a forensic facial reconstruction AI interpretation engine.
 Your job is to read natural language descriptions of a person's face and convert them into structured slider values.
 
-Output your response strictly as a JSON object containing two keys:
+Output your response strictly as a JSON object containing three keys:
 1. "parameters": A dictionary mapping facial feature keys to a float between 0.0 and 1.0. 
    Supported keys: "jaw_width", "chin_length", "face_length", "eye_size", "eye_spacing", "eye_angle", "nose_length", "nose_width", "lip_thickness", "mouth_width".
    Only include keys that are explicitly mentioned or clearly implied by the input. Do not output values for features not mentioned.
@@ -21,13 +21,15 @@ Output your response strictly as a JSON object containing two keys:
    1.0 represents the maximum possible value (e.g. very wide, very large, very thick).
    0.5 represents the average/neutral value.
    
-2. "interpretation": A short English summary (1-2 sentences max) of the action you took. If the user spoke in another language, translate the summary to English. Example: "Increased jaw width and narrowed eyes."
+2. "gender": A string, either "male" or "female", based on nouns ("woman", "man", "girl"), pronouns ("she", "he", "her"), or explicit mentions in the input. Default to "male" if the gender is not specified.
+
+3. "interpretation": A short English summary (1-2 sentences max) of the action you took. If the user spoke in another language, translate the summary to English. Example: "Detected female subject; increased jaw width and narrowed eyes."
 
 Return ONLY valid JSON.
 """
 
-async def parse_natural_language_to_params(text: str, lang: str = "en") -> tuple[dict, str]:
-    """Parse text into face parameters using OpenAI API. Returns (parameters_dict, interpretation_string)."""
+async def parse_natural_language_to_params(text: str, lang: str = "en") -> tuple[dict, str, str]:
+    """Parse text into face parameters using OpenAI API. Returns (parameters_dict, gender_str, interpretation_string)."""
     if not client:
         # Fallback dummy parser if no API key is provided
         return {}, f"Simulated interpretation of '{text}' (Language: {lang})"
@@ -46,6 +48,7 @@ async def parse_natural_language_to_params(text: str, lang: str = "en") -> tuple
         data = json.loads(result_text)
         
         params = data.get("parameters", {})
+        gender = data.get("gender", "male")
         interpretation = data.get("interpretation", "Parameters updated from description.")
         
         # Ensure all params are floats between 0 and 1
@@ -54,10 +57,10 @@ async def parse_natural_language_to_params(text: str, lang: str = "en") -> tuple
             if isinstance(v, (int, float)):
                 valid_params[k] = max(0.0, min(1.0, float(v)))
                 
-        return valid_params, interpretation
+        return valid_params, gender, interpretation
     except Exception as e:
         print(f"LLM parsing error: {e}")
-        return {}, f"Failed to parse description: {str(e)}"
+        return {}, "male", f"Failed to parse description: {str(e)}"
 
 async def transcribe_audio(audio_file_bytes: bytes, filename: str) -> str:
     """Transcribe audio using OpenAI's Whisper model."""

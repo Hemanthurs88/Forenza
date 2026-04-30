@@ -48,6 +48,7 @@ export default function SessionPage() {
   const handleInitialGenerate = async (promptText, lang) => {
     let sessionData
     let initialParams = {}
+    let detectedGender = 'male'
     
     try {
       setLoading(true)
@@ -59,6 +60,9 @@ export default function SessionPage() {
           initialParams = nlpData.parameters
           setParams(initialParams) // Update local store
         }
+        if (nlpData.gender) {
+          detectedGender = nlpData.gender
+        }
       } catch (nlpErr) {
         toast.error('NLP processing failed, using default parameters')
       }
@@ -66,9 +70,11 @@ export default function SessionPage() {
       // Step 2: Create session in DB with parsed parameters and selected case
       sessionData = await createSession({ 
         parameters: initialParams,
-        case_id: selectedCaseId || null
+        gender: detectedGender,
+        case_id: selectedCaseId || null,
+        description: promptText
       })
-      setSession(sessionData.session_id)
+      setSession(sessionData.id)
     } catch (err) {
       setLoading(false)
       toast.error('Failed to create session — check backend connection')
@@ -269,6 +275,15 @@ export default function SessionPage() {
           )}
         </div>
       </main>
+      {/* Legal Disclaimer Overlay */}
+      <footer className="fixed bottom-0 left-0 right-0 bg-surface-container-high/80 backdrop-blur-md border-t border-border py-1.5 px-4 flex items-center justify-center gap-2 z-[200]">
+        <svg className="w-3.5 h-3.5 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <p className="text-[10px] font-display font-medium text-on-surface-variant tracking-wide">
+          <span className="text-warning font-bold">FORENSIC DISCLAIMER:</span> AI-generated reconstructions are morphological models based on descriptive testimony. These images are for investigative reference only and do not constitute absolute biological accuracy.
+        </p>
+      </footer>
     </div>
   )
 }

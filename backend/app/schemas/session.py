@@ -23,7 +23,9 @@ class SessionStateRead(BaseModel):
     id: str          # serialised as string for frontend
     user_id: str
     case_id: str | None = None
+    gender: str = "male"
     parameters: dict = Field(default_factory=dict)
+    description: str | None = None
     preset: str | None = None
     z_current: str | None = None
     created_at: datetime
@@ -39,7 +41,9 @@ class SessionStateRead(BaseModel):
             id=str(obj.id),
             user_id=str(obj.user_id),
             case_id=str(obj.case_id) if obj.case_id else None,
+            gender=obj.gender,
             parameters=obj.parameters or {},
+            description=obj.description,
             preset=obj.preset,
             z_current=obj.z_current,
             created_at=obj.created_at,
@@ -50,5 +54,7 @@ class SessionStateRead(BaseModel):
 class SessionStateCreate(BaseModel):
     """Session creation request."""
     parameters: FaceParams = Field(default_factory=FaceParams)
+    gender: str = "male"
+    description: str | None = None
     case_id: UUID | None = None
     preset: str | None = None

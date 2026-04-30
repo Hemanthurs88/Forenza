@@ -16,6 +16,7 @@ router = APIRouter(prefix="/sessions", tags=["refine"])
 class RefineRequest(BaseModel):
     """Refine endpoint request with new parameters."""
     parameters: FaceParams
+    description: str | None = None
 
 
 @router.post("/{session_id}/refine")
@@ -50,6 +51,15 @@ async def refine_face(
     params_before = session.parameters or {}
     params_after = req.parameters.model_dump()
 
+    # Accumulate description if provided
+    new_description = req.description
+    accumulated_description = session.description
+    if new_description:
+        if accumulated_description:
+            accumulated_description += f", {new_description}"
+        else:
+            accumulated_description = new_description
+
     from app.core.image_gen import generate_forensic_image
     from app.core.storage import upload_image_bytes
     from app.core.similarity import compute_phash, hash_to_string
@@ -58,7 +68,12 @@ async def refine_face(
         # Same SDXL pipeline as initial generation, with same session seed.
         # The anchored prompt + seed ensures the face structure stays consistent.
         # Only the feature descriptors change based on accumulated parameters.
-        raw_image_bytes = await generate_forensic_image(params_after, session.z_current)
+        raw_image_bytes = await generate_forensic_image(
+            params_after, 
+            session.z_current, 
+            refinement_text=accumulated_description,
+            gender=session.gender
+        )
         # Compute pHash for similarity matching
         phash_arr = compute_phash(raw_image_bytes)
         phash_str = hash_to_string(phash_arr)
@@ -74,6 +89,7 @@ async def refine_face(
 
     # Update session
     session.parameters = params_after
+    session.description = accumulated_description
     session.updated_at = datetime.now(timezone.utc)
     await save_session(db, session)
 

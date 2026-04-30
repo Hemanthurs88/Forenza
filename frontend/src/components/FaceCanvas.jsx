@@ -14,23 +14,32 @@ export default function FaceCanvas() {
   const [showMatches, setShowMatches] = useState(false)
 
   const handleExport = async () => {
-    if (!sessionId) return
+    if (!imageUrl) return
     setExporting(true)
     try {
-      const data = await exportSession(sessionId)
-      const jsonStr = JSON.stringify(data, null, 2)
-      const blob = new Blob([jsonStr], { type: 'application/json' })
+      // Use the backend proxy to bypass CORS restrictions
+      const proxyUrl = `http://127.0.0.1:8000/api/sessions/download-image?url=${encodeURIComponent(imageUrl)}`
+      
+      const response = await fetch(proxyUrl, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('forensic_token')}`
+        }
+      })
+      
+      if (!response.ok) throw new Error('Download failed')
+      
+      const blob = await response.blob()
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.download = `forensic-case-export-${sessionId.slice(0, 8)}.json`
+      link.download = `forensic-render-${sessionId?.slice(0, 8) || 'export'}.png`
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
       URL.revokeObjectURL(url)
-      toast.success('Case export complete')
+      toast.success('Image exported successfully')
     } catch (err) {
-      toast.error('Export failed')
+      toast.error('Export failed: ' + err.message)
     } finally {
       setExporting(false)
     }
@@ -56,7 +65,7 @@ export default function FaceCanvas() {
   }
 
   return (
-    <div className="bg-surface-container border border-border rounded-xl overflow-hidden animate-fade-in">
+    <div className="h-full flex flex-col bg-surface-container border border-border rounded-xl overflow-hidden animate-fade-in">
       {/* Header */}
       <div className="px-6 py-3 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -75,7 +84,7 @@ export default function FaceCanvas() {
       </div>
 
       {/* Canvas Area */}
-      <div className="relative aspect-[3/4] max-h-[520px] bg-surface-container-lowest flex items-center justify-center overflow-hidden">
+      <div className="relative flex-1 bg-surface-container-lowest flex items-center justify-center overflow-hidden min-h-[400px]">
         {isLoading && (
           <div className="absolute inset-0 bg-surface/70 backdrop-blur-sm flex flex-col items-center justify-center z-10 gap-3">
             <div className="relative w-12 h-12">
@@ -89,23 +98,23 @@ export default function FaceCanvas() {
         )}
 
         {imageUrl ? (
-          compareMode && historyIndex > 0 ? (
-            <div className="w-full h-full flex items-center justify-center bg-black/20">
-              <div className="flex-1 h-full border-r border-primary/20 relative flex items-center justify-center p-2">
+          compareMode && imageHistory.length > 1 ? (
+            <div className="w-full h-full flex items-stretch">
+              <div className="flex-1 border-r border-border relative flex items-center justify-center p-2 bg-surface-container-low/30">
                 <img
-                  src={imageHistory[historyIndex - 1].url}
-                  alt="Previous"
-                  className="w-full h-full object-contain opacity-75 grayscale sepia-[0.2]"
+                  src={imageHistory[0].url}
+                  alt="Initial"
+                  className="max-w-full max-h-full object-contain"
                 />
-                <div className="absolute bottom-4 left-4 text-[10px] bg-surface-container-high/80 backdrop-blur border border-outline-variant px-2 py-1 rounded text-outline font-mono">PREVIOUS</div>
+                <div className="absolute top-3 left-3 text-[8px] bg-surface-container-high/90 backdrop-blur border border-outline-variant px-1.5 py-0.5 rounded text-on-surface-variant font-display font-bold uppercase tracking-widest">Initial</div>
               </div>
-              <div className="flex-1 h-full relative flex items-center justify-center p-2">
+              <div className="flex-1 relative flex items-center justify-center p-2 bg-surface-container-lowest">
                 <img
                   src={imageUrl}
                   alt="Current"
-                  className="w-full h-full object-contain"
+                  className="max-w-full max-h-full object-contain"
                 />
-                <div className="absolute bottom-4 right-4 text-[10px] bg-primary/20 border border-primary/30 text-primary px-2 py-1 rounded font-mono backdrop-blur">CURRENT</div>
+                <div className="absolute top-3 right-3 text-[8px] bg-primary/20 border border-primary/30 text-primary px-1.5 py-0.5 rounded font-display font-bold uppercase tracking-widest backdrop-blur">Current</div>
               </div>
             </div>
           ) : (
@@ -159,7 +168,11 @@ export default function FaceCanvas() {
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 10h-10a8 8 10 00-8 8v2M21 10l-6 6m6-6l-6-6" /></svg>
               </button>
               <div className="w-px h-3 bg-outline-variant" />
-              <button onClick={() => setCompareMode(!compareMode)} disabled={historyIndex <= 0} className={`p-1 text-[10px] font-display font-medium px-2 rounded ${compareMode ? 'bg-primary/20 text-primary' : 'text-on-surface-variant hover:text-on-surface'} disabled:opacity-30 transition-colors`} title="Compare with Previous">
+              <button 
+                onClick={() => setCompareMode(!compareMode)} 
+                disabled={imageHistory.length <= 1} 
+                className={`p-1 text-[10px] font-display font-bold px-3 rounded-md border transition-all ${compareMode ? 'bg-primary text-white border-primary shadow-[0_0_10px_rgba(59,130,246,0.3)]' : 'bg-surface-container-high text-on-surface-variant border-outline-variant hover:border-primary/50'} disabled:opacity-30`}
+              >
                 COMPARE
               </button>
             </div>
@@ -185,7 +198,7 @@ export default function FaceCanvas() {
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
             </svg>
-            {exporting ? 'EXPORTING...' : 'EXPORT JSON'}
+            {exporting ? 'EXPORTING...' : 'EXPORT IMAGE'}
           </button>
         </div>
       </div>
